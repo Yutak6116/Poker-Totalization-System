@@ -1,0 +1,19 @@
+services:
+  web:
+    build:
+      context: ..
+      dockerfile: .devcontainer/Dockerfile
+      args: { NODE_VERSION: "20" }
+    volumes:
+      - ..:/workspaces/app:delegated
+      - node_modules:/workspaces/app/node_modules
+    ports:
+      - "5173:5173"
+    environment:
+      - CHOKIDAR_USEPOLLING=true
+      - WATCHPACK_POLLING=true
+      - TZ=Asia/Tokyo
+      - DOCKER=1
+    command: sleep infinity
+volumes:
+  node_modules:
