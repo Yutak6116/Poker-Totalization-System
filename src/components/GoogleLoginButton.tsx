@@ -3,7 +3,12 @@ import { auth } from "../lib/firebase";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 
-export default function GoogleLoginButton() {
+type Props = {
+  label: string;
+  redirectTo: string; // "/player" or "/admin"
+};
+
+export default function GoogleLoginButton({ label, redirectTo }: Props) {
   const [busy, setBusy] = useState(false);
   const navigate = useNavigate();
 
@@ -12,8 +17,8 @@ export default function GoogleLoginButton() {
       setBusy(true);
       const provider = new GoogleAuthProvider();
       await signInWithPopup(auth, provider);
-      // 成功したら成功ページへ
-      navigate("/success");
+      // 成功したらボタンに応じたダッシュボードへ
+      navigate(redirectTo);
     } catch (e) {
       console.error(e);
       alert("ログインに失敗しました。コンソールを確認してください。");
@@ -36,11 +41,13 @@ export default function GoogleLoginButton() {
         alignItems: "center",
         gap: 8,
         background: "#fff",
+        width: "100%",
+        justifyContent: "center",
       }}
-      aria-label="Googleでログイン"
+      aria-label={label}
     >
       <span style={{ width: 18, height: 18, display: "inline-block" }}>🔑</span>
-      {busy ? "ログイン中..." : "Googleでログイン"}
+      {busy ? "ログイン中..." : label}
     </button>
   );
 }

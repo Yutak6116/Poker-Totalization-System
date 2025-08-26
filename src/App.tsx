@@ -1,17 +1,48 @@
 import { Routes, Route } from "react-router-dom";
 import LoginPage from "./pages/LoginPage";
-import SuccessPage from "./pages/SuccessPage";
 import ProtectedRoute from "./routes/ProtectedRoute";
+import PlayerDashboard from "./pages/PlayerDashboard";
+import AdminDashboard from "./pages/AdminDashboard";
+import AdminGroupPage from "./pages/AdminGroupPage";
+import PlayerGroupPage from "./pages/PlayerGroupPage"; // ★追加
 
 export default function App() {
   return (
     <Routes>
       <Route path="/" element={<LoginPage />} />
+
       <Route
-        path="/success"
+        path="/player"
         element={
           <ProtectedRoute>
-            <SuccessPage />
+            <PlayerDashboard />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/player/group/:groupId" // ★追加
+        element={
+          <ProtectedRoute>
+            <PlayerGroupPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/admin"
+        element={
+          <ProtectedRoute>
+            <AdminDashboard />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/admin/group/:groupId"
+        element={
+          <ProtectedRoute>
+            <AdminGroupPage />
           </ProtectedRoute>
         }
       />
