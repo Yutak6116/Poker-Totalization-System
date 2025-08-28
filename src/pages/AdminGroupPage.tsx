@@ -1,9 +1,8 @@
 // src/pages/AdminGroupPage.tsx
 import { useEffect, useMemo, useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { auth, db } from "../lib/firebase";
+import { db } from "../lib/firebase";
 import {
-  addDoc,
   collection,
   doc,
   getDoc,
@@ -11,7 +10,6 @@ import {
   orderBy,
   query,
   serverTimestamp,
-  Timestamp,
   updateDoc,
   where,
 } from "firebase/firestore";
@@ -22,7 +20,7 @@ type GroupSettings = {
   // 新仕様: SB/BB を別々に固定
   stakes_sb?: number | null;
   stakes_bb?: number | null;
-  // 後方互換（旧）："1/3" のような文字列が残っていてもパースして使えるように
+  // 後方互換（旧）："1/3" のような文字列が残っていてもパースして使う
   stakes_value?: string | null;
   ranking_top_n: number;
 };
@@ -73,8 +71,6 @@ type HistoryDoc = {
 const pad6 = (n: number | string) =>
   String(n).replace(/\D/g, "").padStart(6, "0");
 const formatTs = (t?: any) => t?.toDate?.().toLocaleString?.() || "-";
-const numOr = (v: any, def = 0) =>
-  typeof v === "number" && !isNaN(v) ? v : def;
 const parseLegacyStakes = (s?: string | null) => {
   if (!s) return { sb: null as number | null, bb: null as number | null };
   const [a, b] = s.split("/").map((x) => Number(x));
@@ -122,7 +118,6 @@ function TabButton({
 // ========== ページ本体 ==========
 export default function AdminGroupPage() {
   const { groupId } = useParams<{ groupId: string }>();
-  const user = auth.currentUser;
 
   const TABS = ["グループ設定", "収支ランキング", "更新履歴"] as const;
   const [tab, setTab] = useState<(typeof TABS)[number]>("グループ設定");
@@ -519,10 +514,6 @@ export default function AdminGroupPage() {
                   </tbody>
                 </table>
               )}
-              <div style={{ marginTop: 8, fontSize: 12, opacity: 0.7 }}>
-                ※ 本番運用では Cloud Functions
-                で集計値を更新する設計が堅牢です。
-              </div>
             </div>
           )}
 

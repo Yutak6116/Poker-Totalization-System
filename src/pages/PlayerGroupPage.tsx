@@ -23,10 +23,8 @@ type GroupSettings = {
   // 新仕様: SB/BBを別で固定
   stakes_sb?: number | null;
   stakes_bb?: number | null;
-
   // 後方互換（旧）："1/3" のような文字列が残っていてもパースして使う
   stakes_value?: string | null;
-
   ranking_top_n: number;
 };
 
@@ -1028,10 +1026,6 @@ export default function PlayerGroupPage() {
                   </tbody>
                 </table>
               )}
-              <div style={{ marginTop: 8, opacity: 0.7, fontSize: 12 }}>
-                ※ 集計はクライアント側の簡易版です。本番運用では Cloud Functions
-                で集計値を更新する設計が堅牢です。
-              </div>
             </div>
           )}
         </div>

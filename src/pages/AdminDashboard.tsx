@@ -16,6 +16,7 @@ import {
   where,
 } from "firebase/firestore";
 import { Link, useNavigate } from "react-router-dom";
+import Modal from "../components/Modal";
 
 // ===== 型 =====
 type GroupDoc = {
@@ -56,48 +57,6 @@ const pad6 = (n: number | string) =>
   String(n).replace(/\D/g, "").padStart(6, "0");
 
 const formatTs = (t?: any) => t?.toDate?.().toLocaleString?.() || "-";
-
-// ===== モーダル共通（超簡易） =====
-function Modal({
-  open,
-  onClose,
-  children,
-  width = 480,
-}: {
-  open: boolean;
-  onClose: () => void;
-  children: React.ReactNode;
-  width?: number;
-}) {
-  if (!open) return null;
-  return (
-    <div
-      onClick={onClose}
-      style={{
-        position: "fixed",
-        inset: 0,
-        background: "rgba(0,0,0,.25)",
-        display: "grid",
-        placeItems: "center",
-        zIndex: 1000,
-      }}
-    >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        style={{
-          width,
-          maxWidth: "92vw",
-          background: "#fff",
-          borderRadius: 16,
-          boxShadow: "0 10px 28px rgba(0,0,0,.18)",
-          padding: 20,
-        }}
-      >
-        {children}
-      </div>
-    </div>
-  );
-}
 
 export default function AdminDashboard() {
   const { user } = useAuth();

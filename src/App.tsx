@@ -4,7 +4,7 @@ import ProtectedRoute from "./routes/ProtectedRoute";
 import PlayerDashboard from "./pages/PlayerDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminGroupPage from "./pages/AdminGroupPage";
-import PlayerGroupPage from "./pages/PlayerGroupPage"; // ★追加
+import PlayerGroupPage from "./pages/PlayerGroupPage";
 
 export default function App() {
   return (
@@ -21,7 +21,7 @@ export default function App() {
       />
 
       <Route
-        path="/player/group/:groupId" // ★追加
+        path="/player/group/:groupId"
         element={
           <ProtectedRoute>
             <PlayerGroupPage />
