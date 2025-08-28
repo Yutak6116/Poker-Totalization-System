@@ -2,12 +2,13 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: [ph-pages]
+    branches: [main]
+  workflow_dispatch:
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: read # actions/checkout 用
+  pages: write # actions/deploy-pages 用
+  id-token: write # OIDC で Pages デプロイに必要
 
 concurrency:
   group: "pages"
@@ -17,32 +18,52 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: "npm"
 
-      - run: npm ci
-      - run: npm run build # Vite: dist/ へ出力
+      - name: Install deps
+        run: npm ci
 
-      # SPA フォールバック（404.html を作成）
-      - run: cp dist/index.html dist/404.html
+      - name: Build
+        run: npm run build
+        env:
+          # ==== Vite 向けビルド時環境変数 ====
+          VITE_FB_API_KEY: ${{ secrets.VITE_FB_API_KEY }}
+          VITE_FB_AUTH_DOMAIN: ${{ secrets.VITE_FB_AUTH_DOMAIN }}
+          VITE_FB_PROJECT_ID: ${{ secrets.VITE_FB_PROJECT_ID }}
+          VITE_FB_STORAGE_BUCKET: ${{ secrets.VITE_FB_STORAGE_BUCKET }}
+          VITE_FB_MESSAGING_SENDER_ID: ${{ secrets.VITE_FB_MESSAGING_SENDER_ID }}
+          VITE_FB_APP_ID: ${{ secrets.VITE_FB_APP_ID }}
+          VITE_FB_MEASUREMENT_ID: ${{ secrets.VITE_FB_MEASUREMENT_ID }}
 
-      # CNAME を同梱（正規ドメインに合わせて）
-      - run: echo "www.poker-totalization-system.com" > dist/CNAME
+      # SPA ルーティング用フォールバック
+      - name: SPA fallback (copy index.html -> 404.html)
+        run: cp dist/index.html dist/404.html
 
-      - uses: actions/upload-pages-artifact@v3
+      # （任意）CNAME をファイルで同梱したい場合
+      # GitHub Pages の設定でカスタムドメインを指定すれば CNAME ファイルは必須ではありませんが、
+      # 明示的に含めたい場合は以下を有効化：
+      # - name: Add CNAME
+      #   run: echo "poker-totalization-system.com" > dist/CNAME
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v4
         with:
-          path: dist
+          path: ./dist
 
   deploy:
-    needs: build
     runs-on: ubuntu-latest
+    needs: build
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - id: deployment
+      - name: Deploy to GitHub Pages
+        id: deployment
         uses: actions/deploy-pages@v4
