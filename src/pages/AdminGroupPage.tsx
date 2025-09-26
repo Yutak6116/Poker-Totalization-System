@@ -31,7 +31,8 @@ type GroupDoc = {
   creator: string;
   player_password: string;
   admin_password: string;
-  settings?: GroupSettings;
+  creator_name?: string;
+  creator_uid?: string;
 };
 
 type PlayerDoc = {
@@ -87,6 +88,13 @@ const CAT_COLOR: Record<HistoryDoc["change_category"], string> = {
   update: "#1a73e8",
   delete: "#d93025",
 };
+
+const creatorNameOf = (g?: GroupDoc) =>
+  g?.creator_name ||
+  (g?.creator && g.creator.includes("@")
+    ? g.creator.split("@")[0]
+    : g?.creator) ||
+  "(unknown)";
 
 // ========== UI 小物 ==========
 function TabButton({
@@ -190,16 +198,16 @@ export default function AdminGroupPage() {
   }, [groupId]);
 
   const ranking = useMemo(() => {
+    type RankRow = { uid: string; name: string; total: number };
     const sums: Record<string, number> = {};
     balances.forEach((b) => {
       sums[b.player_uid] =
         (sums[b.player_uid] ?? 0) + (b.ending_bb - b.buy_in_bb);
     });
-    const rows = Object.entries(sums)
+    const rows: RankRow[] = Object.entries(sums)
       .map(([uid, total]) => ({
         uid,
         name: players[uid]?.display_name ?? "(unknown)",
-        email: players[uid]?.email ?? "",
         total,
       }))
       .sort((a, b) => b.total - a.total);
@@ -305,7 +313,7 @@ export default function AdminGroupPage() {
               </span>
             </h2>
             <div style={{ opacity: 0.7, fontSize: 13 }}>
-              作成者: {group.creator}
+              作成者: {creatorNameOf(group)}
             </div>
           </div>
           <Link
@@ -491,7 +499,6 @@ export default function AdminGroupPage() {
                     <tr>
                       <th style={th}>順位</th>
                       <th style={th}>表示名</th>
-                      <th style={th}>メール</th>
                       <th style={{ ...th, textAlign: "right" }}>累計BB</th>
                     </tr>
                   </thead>
@@ -500,7 +507,6 @@ export default function AdminGroupPage() {
                       <tr key={r.uid}>
                         <td style={td}>{idx + 1}</td>
                         <td style={td}>{r.name}</td>
-                        <td style={td}>{r.email}</td>
                         <td
                           style={{ ...td, textAlign: "right", fontWeight: 600 }}
                         >

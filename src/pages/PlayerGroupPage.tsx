@@ -128,8 +128,8 @@ export default function PlayerGroupPage() {
   const [me, setMe] = useState<PlayerDoc | null>(null);
 
   // --- タブ ---
-  const TABS = ["個人設定", "収支報告", "収支確認", "上位ランキング"] as const;
-  const [tab, setTab] = useState<(typeof TABS)[number]>("個人設定");
+  const TABS = ["収支報告", "収支確認", "上位ランキング"] as const;
+  const [tab, setTab] = useState<(typeof TABS)[number]>("収支報告");
 
   // --- balances / players ---
   const [myBalances, setMyBalances] = useState<BalanceRow[]>([]);
@@ -198,10 +198,16 @@ export default function PlayerGroupPage() {
       const pref = doc(db, "groups", groupId, "players", user.uid);
       const psnap = await getDoc(pref);
       if (!psnap.exists()) {
+        const uref = doc(db, "users", user.uid);
+        const usnap = await getDoc(uref);
+        const fixedName =
+          (usnap.exists() ? (usnap.data() as any).display_name : null) ||
+          user.displayName ||
+          "No Name";
         const pdoc: PlayerDoc = {
           player_id: parseInt(randDigits(6), 10),
           group_id: g.group_id,
-          display_name: user.displayName ?? "No Name",
+          display_name: fixedName,
           email: user.email ?? "",
           total_balance: 0,
         };
@@ -286,15 +292,15 @@ export default function PlayerGroupPage() {
   }, [month, monthStr]);
 
   const ranking = useMemo(() => {
+    type RankRow = { uid: string; name: string; total: number };
     const sums: Record<string, number> = {};
     allBalances.forEach((b) => {
       sums[b.player_uid] =
         (sums[b.player_uid] ?? 0) + (b.ending_bb - b.buy_in_bb);
     });
-    const rows = Object.entries(sums).map(([uid, total]) => ({
+    const rows: RankRow[] = Object.entries(sums).map(([uid, total]) => ({
       uid,
       name: playersMap[uid]?.display_name ?? "(unknown)",
-      email: playersMap[uid]?.email ?? "",
       total,
     }));
     rows.sort((a, b) => b.total - a.total);
@@ -660,29 +666,6 @@ export default function PlayerGroupPage() {
         </div>
 
         <div style={{ marginTop: 16 }}>
-          {/* --- 個人設定 --- */}
-          {tab === "個人設定" && (
-            <div>
-              <p>
-                表示名: <strong>{me.display_name}</strong>
-              </p>
-              <button
-                onClick={() => {
-                  setNewName(me.display_name || "");
-                  setOpenName(true);
-                }}
-                style={{
-                  padding: "8px 12px",
-                  borderRadius: 10,
-                  border: "1px solid #ddd",
-                  background: "#fff",
-                }}
-              >
-                表示名を変更
-              </button>
-            </div>
-          )}
-
           {/* --- 収支報告 --- */}
           {tab === "収支報告" && (
             <div>
@@ -1003,7 +986,6 @@ export default function PlayerGroupPage() {
                     <tr>
                       <th style={th}>順位</th>
                       <th style={th}>表示名</th>
-                      <th style={th}>メール</th>
                       <th style={{ ...th, textAlign: "right" }}>累計BB</th>
                     </tr>
                   </thead>
@@ -1012,7 +994,6 @@ export default function PlayerGroupPage() {
                       <tr key={r.uid}>
                         <td style={td}>{idx + 1}</td>
                         <td style={td}>{r.name}</td>
-                        <td style={td}>{r.email}</td>
                         <td
                           style={{ ...td, textAlign: "right", fontWeight: 600 }}
                         >

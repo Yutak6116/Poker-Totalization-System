@@ -27,6 +27,8 @@ type GroupDoc = {
   admin_password: string;
   created_at?: any;
   last_updated?: any;
+  creator_name?: string;
+  creator_uid?: string;
 };
 
 type AdminMembership = {
@@ -57,6 +59,13 @@ const pad6 = (n: number | string) =>
   String(n).replace(/\D/g, "").padStart(6, "0");
 
 const formatTs = (t?: any) => t?.toDate?.().toLocaleString?.() || "-";
+
+const creatorNameOf = (g?: GroupDoc) =>
+  g?.creator_name ||
+  (g?.creator && g.creator.includes("@")
+    ? g.creator.split("@")[0]
+    : g?.creator) ||
+  "(unknown)";
 
 export default function AdminDashboard() {
   const { user } = useAuth();
@@ -137,6 +146,12 @@ export default function AdminDashboard() {
       for (let attempt = 0; attempt < 10; attempt++) {
         const gidStr = gen6(); // ★6桁ランダム
         const gidNum = parseInt(gidStr, 10);
+        const uref = doc(db, "users", user.uid);
+        const usnap = await getDoc(uref);
+        const creatorName =
+          (usnap.exists() ? (usnap.data() as any).display_name : null) ||
+          user.displayName ||
+          (email.includes("@") ? email.split("@")[0] : "No Name");
 
         try {
           await runTransaction(db, async (tx) => {
@@ -153,6 +168,8 @@ export default function AdminDashboard() {
               group_id: gidNum,
               group_name: newGroupName.trim(),
               creator: email,
+              creator_name: creatorName,
+              creator_uid: user.uid,
               player_password: playerPw,
               admin_password: adminPw,
               created_at: serverTimestamp(),
@@ -310,6 +327,16 @@ export default function AdminDashboard() {
         >
           <h2 style={{ margin: 0 }}>Admin ダッシュボード</h2>
           <div style={{ display: "flex", gap: 8 }}>
+            <Link
+              to="/player"
+              style={{
+                padding: "8px 12px",
+                borderRadius: 10,
+                border: "1px solid #ddd",
+              }}
+            >
+              Player ダッシュボードへ
+            </Link>
             <button
               onClick={() => setOpenJoin(true)}
               style={{
@@ -387,7 +414,7 @@ export default function AdminDashboard() {
                   >
                     <span>ID: {pad6(g.group_id)}</span>
                     <span>最終更新: {formatTs(g.last_updated)}</span>
-                    <span>作成者: {g.creator}</span>
+                    <span>作成者: {creatorNameOf(g)}</span>
                   </div>
                 </div>
                 <Link
