@@ -678,7 +678,7 @@ export default function PlayerGroupPage() {
                   background: "#fff",
                 }}
               >
-                収支報告モーダルを開く
+                収支を報告する
               </button>
               <div style={{ marginTop: 12, opacity: 0.7, fontSize: 13 }}>
                 ※ ステークスは <strong>SB</strong> と <strong>BB</strong>{" "}
@@ -1011,35 +1011,6 @@ export default function PlayerGroupPage() {
           )}
         </div>
       </div>
-
-      {/* ---- 表示名変更モーダル ---- */}
-      <Modal
-        open={openName}
-        onClose={() => {
-          if (!savingName) setOpenName(false);
-        }}
-      >
-        <h3 style={{ marginTop: 0 }}>表示名を変更</h3>
-        <input
-          value={newName}
-          onChange={(e) => setNewName(e.target.value)}
-          placeholder="例: Yuta"
-          style={inp}
-        />
-        <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
-          <button onClick={saveDisplayName} disabled={savingName} style={btn}>
-            {savingName ? "保存中..." : "保存"}
-          </button>
-          <button
-            onClick={() => {
-              if (!savingName) setOpenName(false);
-            }}
-            style={btn}
-          >
-            キャンセル
-          </button>
-        </div>
-      </Modal>
 
       {/* ---- 収支報告モーダル ---- */}
       <Modal
