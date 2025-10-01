@@ -136,11 +136,6 @@ export default function PlayerGroupPage() {
   const [allBalances, setAllBalances] = useState<BalanceRow[]>([]);
   const [playersMap, setPlayersMap] = useState<Record<string, PlayerDoc>>({}); // key = uid
 
-  // --- 個人設定（表示名） ---
-  const [openName, setOpenName] = useState(false);
-  const [newName, setNewName] = useState("");
-  const [savingName, setSavingName] = useState(false);
-
   // --- 収支報告 ---
   const [openReport, setOpenReport] = useState(false);
   const [reportDate, setReportDate] = useState<string>(() =>
@@ -332,28 +327,6 @@ export default function PlayerGroupPage() {
   }
 
   // -------------- アクション --------------
-  const saveDisplayName = async () => {
-    if (!groupId || !user || !me) return;
-    const name = newName.trim();
-    if (!name) {
-      alert("表示名を入力してください");
-      return;
-    }
-    setSavingName(true);
-    try {
-      await updateDoc(doc(db, "groups", groupId, "players", user.uid), {
-        display_name: name,
-      });
-      setMe({ ...me, display_name: name });
-      setOpenName(false);
-      setNewName("");
-    } catch (e) {
-      console.error(e);
-      alert("表示名の更新に失敗しました");
-    } finally {
-      setSavingName(false);
-    }
-  };
 
   const submitBalance = async () => {
     if (!groupId || !user || !me || !group) return;
