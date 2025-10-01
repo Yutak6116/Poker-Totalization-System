@@ -82,7 +82,7 @@ export default function LoginPage() {
           textAlign: "center",
         }}
       >
-        <h1 style={{ margin: "0 0 8px" }}>Poker-Totalization-System</h1>
+        <h1 style={{ margin: "0 0 8px" }}>Poker Totalization System</h1>
 
         <div style={{ height: 24 }} />
 
