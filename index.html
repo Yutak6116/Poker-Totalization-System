@@ -48,6 +48,8 @@
         text-decoration: none;
         font-weight: 600;
         box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+        cursor: pointer;
+        display: inline-block;
       }
       #line-external-open .hint {
         background: #f3f4f6;
@@ -113,7 +115,45 @@
         function init() {
           var openBtn = document.getElementById("open-external-btn");
           if (openBtn) {
-            openBtn.setAttribute("href", location.href);
+            var ua = navigator.userAgent || "";
+            var isIOS = /iP(hone|od|ad)/i.test(ua);
+            var isAndroid = /Android/i.test(ua);
+            var href = location.href;
+            // iOS Chromeがある場合に機能するgooglechromeスキームへ差し替え試行
+            if (isIOS) {
+              try {
+                var url = new URL(href);
+                if (url.protocol === "https:") {
+                  href = href.replace(/^https:\/\//, "googlechromes://");
+                } else if (url.protocol === "http:") {
+                  href = href.replace(/^http:\/\//, "googlechrome://");
+                }
+              } catch (e) {
+                // 無視して通常URLにフォールバック
+              }
+              // iOSのLINEでは target="_blank" は新規WebViewになることが多いので削除
+              openBtn.removeAttribute("target");
+              // noopenerは残しておく
+            }
+            // AndroidのLINE内でも新規タブはWebView内になるため、同様に_blankは外す
+            if (isAndroid) {
+              openBtn.removeAttribute("target");
+            }
+            openBtn.setAttribute("href", href);
+            // クリックで直接遷移（iOS LINE内での新規WebView回避）
+            openBtn.addEventListener("click", function (ev) {
+              try {
+                ev.preventDefault();
+              } catch (_) {}
+              try {
+                location.href = href;
+              } catch (_) {}
+            });
+            // iOS時、Chrome未インストール利用者向けに導線表示
+            if (isIOS) {
+              var installBtn = document.getElementById("install-chrome-btn");
+              if (installBtn) installBtn.style.display = "inline-block";
+            }
           }
           var urlEl = document.getElementById("page-url");
           if (urlEl) urlEl.textContent = location.href;
@@ -152,10 +192,10 @@
       <div class="container">
         <h2>外部ブラウザで開いてください</h2>
         <p>
-          このページはLINEアプリ内のブラウザでは正しく動作しません。以下のボタンで外部ブラウザで開くか、画面のメニューから「Safariで開く」または「他のアプリで開く」を選択してください。
+          このページはLINEアプリ内のブラウザでは正しく動作しません。以下のボタンで外部ブラウザで開くか、画面のメニューから「ブラウザで開く」を選択してください。
         </p>
         <div class="actions">
-          <a id="open-external-btn" class="btn" rel="noopener" target="_blank"
+          <a id="open-external-btn" class="btn" rel="noopener"
             >外部ブラウザで開く</a
           >
           <button id="copy-url-btn" class="btn" type="button">
@@ -163,6 +203,16 @@
           </button>
         </div>
         <div class="hint">現在のURL: <code id="page-url"></code></div>
+        <details class="hint" style="margin-top: 12px">
+          <summary>「外部ブラウザで開く」ボタンが機能しない場合</summary>
+          <ol style="margin: 8px 0 0 18px">
+            <li>画面右下の「︙」メニューをタップ</li>
+            <li>ブラウザで開くを選択</li>
+            <li>
+              もしくは上の「URLをコピー」でURLをコピーし、ブラウザに貼り付けて開く
+            </li>
+          </ol>
+        </details>
       </div>
     </div>
     <div id="root"></div>
