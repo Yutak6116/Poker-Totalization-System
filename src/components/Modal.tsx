@@ -29,6 +29,8 @@ export default function Modal({
         style={{
           width,
           maxWidth: "92vw",
+          maxHeight: "90dvh",
+          overflowY: "auto",
           background: "#fff",
           borderRadius: 16,
           boxShadow: "0 10px 28px rgba(0,0,0,.18)",

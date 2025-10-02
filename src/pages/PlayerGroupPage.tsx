@@ -177,6 +177,23 @@ export default function PlayerGroupPage() {
   const [openDelete, setOpenDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
+  // --- 収支確認（データベースビュー）フィルタ ---
+  const [openFilter, setOpenFilter] = useState(false);
+  // 日付（YYYY-MM-DD）
+  const [fDateStart, setFDateStart] = useState<string>("");
+  const [fDateEnd, setFDateEnd] = useState<string>("");
+  // ステークス（部分一致）
+  const [fStakes, setFStakes] = useState<string>("");
+  // 数値レンジ
+  const [fBuyInMin, setFBuyInMin] = useState<string>("");
+  const [fBuyInMax, setFBuyInMax] = useState<string>("");
+  const [fEndingMin, setFEndingMin] = useState<string>("");
+  const [fEndingMax, setFEndingMax] = useState<string>("");
+  const [fDeltaMin, setFDeltaMin] = useState<string>("");
+  const [fDeltaMax, setFDeltaMax] = useState<string>("");
+  // メモ（部分一致）
+  const [fMemo, setFMemo] = useState<string>("");
+
   // -------------- 初期ロード --------------
   useEffect(() => {
     (async () => {
@@ -254,6 +271,140 @@ export default function PlayerGroupPage() {
       ),
     [myBalances]
   );
+
+  // ---- フィルタ用ユーティリティ ----
+  const toMsDateOnly = (d: string): number =>
+    d ? new Date(d + "T00:00:00").getTime() : 0;
+  const toMsDateOnlyEnd = (d: string): number =>
+    d ? new Date(d + "T23:59:59.999").getTime() : 0;
+  const deltaOf = (b: BalanceRow): number => b.ending_bb - b.buy_in_bb;
+
+  // ---- 収支（自分）: 絞り込み適用 + 既存の日付降順のまま表示 ----
+  const myBalancesFilteredSorted = useMemo(() => {
+    const dStart = toMsDateOnly(fDateStart);
+    const dEnd = toMsDateOnlyEnd(fDateEnd);
+    const biMin = fBuyInMin ? Number(fBuyInMin) : null;
+    const biMax = fBuyInMax ? Number(fBuyInMax) : null;
+    const edMin = fEndingMin ? Number(fEndingMin) : null;
+    const edMax = fEndingMax ? Number(fEndingMax) : null;
+    const deMin = fDeltaMin ? Number(fDeltaMin) : null;
+    const deMax = fDeltaMax ? Number(fDeltaMax) : null;
+    const stakesNeedle = fStakes.trim().toLowerCase();
+    const memoNeedle = fMemo.trim().toLowerCase();
+
+    const filtered = myBalancesSorted.filter((b) => {
+      // 日付（両端含む）
+      if (dStart || dEnd) {
+        const t = b.date_ts?.toMillis?.() ?? toMsDateOnly(b.date);
+        if (dStart && t < dStart) return false;
+        if (dEnd && t > dEnd) return false;
+      }
+      // ステークス 部分一致
+      if (stakesNeedle) {
+        if (
+          !String(b.stakes || "")
+            .toLowerCase()
+            .includes(stakesNeedle)
+        )
+          return false;
+      }
+      // BuyIn / Ending / Delta
+      if (biMin !== null && b.buy_in_bb < biMin) return false;
+      if (biMax !== null && b.buy_in_bb > biMax) return false;
+      if (edMin !== null && b.ending_bb < edMin) return false;
+      if (edMax !== null && b.ending_bb > edMax) return false;
+      const d = deltaOf(b);
+      if (deMin !== null && d < deMin) return false;
+      if (deMax !== null && d > deMax) return false;
+      // メモ 部分一致
+      if (memoNeedle) {
+        if (
+          !String(b.memo || "")
+            .toLowerCase()
+            .includes(memoNeedle)
+        )
+          return false;
+      }
+      return true;
+    });
+    return filtered; // 既存の myBalancesSorted が日付降順なのでその順を維持
+  }, [
+    myBalancesSorted,
+    fDateStart,
+    fDateEnd,
+    fStakes,
+    fBuyInMin,
+    fBuyInMax,
+    fEndingMin,
+    fEndingMax,
+    fDeltaMin,
+    fDeltaMax,
+    fMemo,
+  ]);
+
+  // ---- サマリー（× で個別クリア）----
+  const filterSummary = useMemo(() => {
+    const chips: { label: string; clear: () => void }[] = [];
+    if (fDateStart)
+      chips.push({
+        label: `日付: ${fDateStart}〜`,
+        clear: () => setFDateStart(""),
+      });
+    if (fDateEnd)
+      chips.push({
+        label: `日付: 〜${fDateEnd}`,
+        clear: () => setFDateEnd(""),
+      });
+    if (fStakes)
+      chips.push({
+        label: `ステークス: ${fStakes}`,
+        clear: () => setFStakes(""),
+      });
+    if (fBuyInMin)
+      chips.push({
+        label: `BuyIn ≥ ${fBuyInMin}`,
+        clear: () => setFBuyInMin(""),
+      });
+    if (fBuyInMax)
+      chips.push({
+        label: `BuyIn ≤ ${fBuyInMax}`,
+        clear: () => setFBuyInMax(""),
+      });
+    if (fEndingMin)
+      chips.push({
+        label: `Ending ≥ ${fEndingMin}`,
+        clear: () => setFEndingMin(""),
+      });
+    if (fEndingMax)
+      chips.push({
+        label: `Ending ≤ ${fEndingMax}`,
+        clear: () => setFEndingMax(""),
+      });
+    if (fDeltaMin)
+      chips.push({
+        label: `差分 ≥ ${fDeltaMin}`,
+        clear: () => setFDeltaMin(""),
+      });
+    if (fDeltaMax)
+      chips.push({
+        label: `差分 ≤ ${fDeltaMax}`,
+        clear: () => setFDeltaMax(""),
+      });
+    if (fMemo)
+      chips.push({ label: `メモ: ${fMemo}`, clear: () => setFMemo("") });
+    return chips;
+  }, [
+    fDateStart,
+    fDateEnd,
+    fStakes,
+    fBuyInMin,
+    fBuyInMax,
+    fEndingMin,
+    fEndingMax,
+    fDeltaMin,
+    fDeltaMax,
+    fMemo,
+  ]);
 
   const monthBalances = useMemo(() => {
     const prefix = monthStr + "-";
@@ -870,7 +1021,66 @@ export default function PlayerGroupPage() {
                   }}
                 >
                   <h3 style={{ marginTop: 0 }}>データベースビュー</h3>
-                  {myBalancesSorted.length === 0 ? (
+                  {/* フィルタボタン + サマリー */}
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: 8,
+                      alignItems: "center",
+                      flexWrap: "wrap",
+                      marginBottom: 8,
+                    }}
+                  >
+                    <button
+                      onClick={() => setOpenFilter(true)}
+                      style={{
+                        padding: "8px 12px",
+                        borderRadius: 10,
+                        border: "1px solid #ddd",
+                        background: "#fff",
+                      }}
+                    >
+                      絞り込み
+                    </button>
+                    {filterSummary.length > 0 && (
+                      <div
+                        style={{ display: "flex", gap: 6, flexWrap: "wrap" }}
+                      >
+                        {filterSummary.map((c, idx) => (
+                          <span
+                            key={idx}
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: 6,
+                              padding: "4px 8px",
+                              borderRadius: 999,
+                              background: "#f2f5ff",
+                              border: "1px solid #dbe1ff",
+                              fontSize: 12,
+                            }}
+                          >
+                            {c.label}
+                            <button
+                              onClick={c.clear}
+                              title="この条件をクリア"
+                              style={{
+                                border: "none",
+                                background: "transparent",
+                                cursor: "pointer",
+                                padding: 0,
+                                lineHeight: 1,
+                              }}
+                            >
+                              ×
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {myBalancesFilteredSorted.length === 0 ? (
                     <div style={{ opacity: 0.7 }}>まだデータがありません。</div>
                   ) : (
                     <table
@@ -888,7 +1098,7 @@ export default function PlayerGroupPage() {
                         </tr>
                       </thead>
                       <tbody>
-                        {myBalancesSorted.map((b) => {
+                        {myBalancesFilteredSorted.map((b) => {
                           const d = b.ending_bb - b.buy_in_bb;
                           const { text, color } = fmtDiff(d);
                           return (
@@ -1224,6 +1434,164 @@ export default function PlayerGroupPage() {
             style={btn}
           >
             キャンセル
+          </button>
+        </div>
+      </Modal>
+
+      {/* ---- 収支確認: フィルタモーダル ---- */}
+      <Modal open={openFilter} onClose={() => setOpenFilter(false)} width={640}>
+        <h3 style={{ marginTop: 0 }}>絞り込み</h3>
+
+        {/* 日付 */}
+        <div
+          style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}
+        >
+          <div>
+            <label style={lbl}>日付（開始）</label>
+            <input
+              type="date"
+              value={fDateStart}
+              onChange={(e) => setFDateStart(e.target.value)}
+              style={inp}
+            />
+          </div>
+          <div>
+            <label style={lbl}>日付（終了）</label>
+            <input
+              type="date"
+              value={fDateEnd}
+              onChange={(e) => setFDateEnd(e.target.value)}
+              style={inp}
+            />
+          </div>
+        </div>
+
+        {/* ステークス */}
+        <label style={lbl}>ステークス（部分一致）</label>
+        <input
+          value={fStakes}
+          onChange={(e) => setFStakes(e.target.value)}
+          placeholder="例: 1/3"
+          style={inp}
+        />
+
+        {/* 数値レンジ */}
+        <div
+          style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}
+        >
+          <div>
+            <label style={lbl}>BuyIn 最小</label>
+            <input
+              value={fBuyInMin}
+              onChange={(e) =>
+                setFBuyInMin(e.target.value.replace(/[^0-9.]/g, ""))
+              }
+              inputMode="decimal"
+              style={inp}
+            />
+          </div>
+          <div>
+            <label style={lbl}>BuyIn 最大</label>
+            <input
+              value={fBuyInMax}
+              onChange={(e) =>
+                setFBuyInMax(e.target.value.replace(/[^0-9.]/g, ""))
+              }
+              inputMode="decimal"
+              style={inp}
+            />
+          </div>
+        </div>
+        <div
+          style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}
+        >
+          <div>
+            <label style={lbl}>Ending 最小</label>
+            <input
+              value={fEndingMin}
+              onChange={(e) =>
+                setFEndingMin(e.target.value.replace(/[^0-9.]/g, ""))
+              }
+              inputMode="decimal"
+              style={inp}
+            />
+          </div>
+          <div>
+            <label style={lbl}>Ending 最大</label>
+            <input
+              value={fEndingMax}
+              onChange={(e) =>
+                setFEndingMax(e.target.value.replace(/[^0-9.]/g, ""))
+              }
+              inputMode="decimal"
+              style={inp}
+            />
+          </div>
+        </div>
+        <div
+          style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}
+        >
+          <div>
+            <label style={lbl}>差分 最小</label>
+            <input
+              value={fDeltaMin}
+              onChange={(e) =>
+                setFDeltaMin(e.target.value.replace(/[^0-9.]/g, ""))
+              }
+              inputMode="decimal"
+              style={inp}
+            />
+          </div>
+          <div>
+            <label style={lbl}>差分 最大</label>
+            <input
+              value={fDeltaMax}
+              onChange={(e) =>
+                setFDeltaMax(e.target.value.replace(/[^0-9.]/g, ""))
+              }
+              inputMode="decimal"
+              style={inp}
+            />
+          </div>
+        </div>
+
+        {/* メモ */}
+        <label style={lbl}>メモ（部分一致）</label>
+        <input
+          value={fMemo}
+          onChange={(e) => setFMemo(e.target.value)}
+          style={inp}
+        />
+
+        <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+          <button
+            onClick={() => {
+              setFDateStart("");
+              setFDateEnd("");
+              setFStakes("");
+              setFBuyInMin("");
+              setFBuyInMax("");
+              setFEndingMin("");
+              setFEndingMax("");
+              setFDeltaMin("");
+              setFDeltaMax("");
+              setFMemo("");
+            }}
+            style={btn}
+          >
+            クリア
+          </button>
+          <button
+            onClick={() => setOpenFilter(false)}
+            style={{
+              padding: "8px 12px",
+              borderRadius: 8,
+              border: "1px solid #111",
+              background: "#111",
+              color: "#fff",
+            }}
+          >
+            適用
           </button>
         </div>
       </Modal>
