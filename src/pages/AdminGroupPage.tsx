@@ -529,6 +529,56 @@ export default function AdminGroupPage() {
     fBBalanceId,
   ]);
 
+  // ---- 収支一覧テーブルのソート（最終更新/日付/BuyIn/Ending/差分）----
+  type SortKey = "last_updated" | "date" | "buy_in_bb" | "ending_bb" | "delta";
+  type SortDir = "asc" | "desc";
+  const [sortKey, setSortKey] = useState<SortKey>("last_updated");
+  const [sortDir, setSortDir] = useState<SortDir>("desc");
+  const [sortClicked, setSortClicked] = useState(false);
+
+  const balancesSortedByUI = useMemo(() => {
+    const arr = [...balancesFilteredSorted];
+    const getVal = (b: BalanceDoc, k: SortKey): number => {
+      switch (k) {
+        case "last_updated":
+          return b.last_updated?.toMillis?.() ?? 0;
+        case "date":
+          return (
+            b.date_ts?.toMillis?.() ??
+            (b.date ? new Date(b.date).setHours(0, 0, 0, 0) : 0)
+          );
+        case "buy_in_bb":
+          return Number(b.buy_in_bb) ?? 0;
+        case "ending_bb":
+          return Number(b.ending_bb) ?? 0;
+        case "delta":
+          return (Number(b.ending_bb) || 0) - (Number(b.buy_in_bb) || 0);
+        default:
+          return 0;
+      }
+    };
+    arr.sort((a, b) => {
+      const va = getVal(a, sortKey);
+      const vb = getVal(b, sortKey);
+      return sortDir === "asc" ? va - vb : vb - va;
+    });
+    return arr;
+  }, [balancesFilteredSorted, sortKey, sortDir]);
+
+  const toggleSort = (k: SortKey) => {
+    let nextKey: SortKey = sortKey;
+    let nextDir: SortDir = sortDir;
+    if (sortKey !== k) {
+      nextKey = k;
+      nextDir = "asc";
+    } else {
+      nextDir = sortDir === "asc" ? "desc" : "asc";
+    }
+    setSortKey(nextKey);
+    setSortDir(nextDir);
+    setSortClicked(true);
+  };
+
   // 更新履歴フィルタ適用
   const historiesFiltered = useMemo(() => {
     const cStart = toMs(fHChangedStart);
@@ -630,6 +680,15 @@ export default function AdminGroupPage() {
     fHMemo,
     fHBalanceId,
   ]);
+
+  // 収支一覧: 表示中（フィルタ後）の差分合計
+  const balancesTotalDelta = useMemo(() => {
+    return balancesFilteredSorted.reduce((sum, b) => {
+      const bi = Number(b.buy_in_bb) || 0;
+      const en = Number(b.ending_bb) || 0;
+      return sum + (en - bi);
+    }, 0);
+  }, [balancesFilteredSorted]);
 
   async function saveSettings() {
     if (!groupId || !group) return;
@@ -951,6 +1010,13 @@ export default function AdminGroupPage() {
               }}
             >
               <h3 style={{ marginTop: 0, marginBottom: 6 }}>現在の収支一覧</h3>
+              <div style={{ marginTop: 8, fontSize: 14 }}>
+                合計（差分）:{" "}
+                {(() => {
+                  const { text, color } = fmtDiff(balancesTotalDelta);
+                  return <span style={{ fontWeight: 700, color }}>{text}</span>;
+                })()}
+              </div>
               <div
                 style={{
                   display: "flex",
@@ -1014,19 +1080,115 @@ export default function AdminGroupPage() {
                 <table style={{ width: "100%", borderCollapse: "collapse" }}>
                   <thead>
                     <tr>
-                      <th style={th}>最終更新日時</th>
+                      <th style={th}>
+                        <button
+                          onClick={() => toggleSort("last_updated")}
+                          style={{
+                            all: "unset",
+                            cursor: "pointer",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 8,
+                          }}
+                        >
+                          <span>最終更新日時</span>
+                          <span style={{ fontSize: 12, opacity: 0.7 }}>
+                            {(!sortClicked || sortKey !== "last_updated") &&
+                              "▲▼"}
+                            {sortClicked &&
+                              sortKey === "last_updated" &&
+                              (sortDir === "asc" ? "▲" : "▼")}
+                          </span>
+                        </button>
+                      </th>
                       <th style={th}>プレイヤー</th>
-                      <th style={th}>日付</th>
+                      <th style={th}>
+                        <button
+                          onClick={() => toggleSort("date")}
+                          style={{
+                            all: "unset",
+                            cursor: "pointer",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 8,
+                          }}
+                        >
+                          <span>日付</span>
+                          <span style={{ fontSize: 12, opacity: 0.7 }}>
+                            {(!sortClicked || sortKey !== "date") && "▲▼"}
+                            {sortClicked &&
+                              sortKey === "date" &&
+                              (sortDir === "asc" ? "▲" : "▼")}
+                          </span>
+                        </button>
+                      </th>
                       <th style={th}>ステークス</th>
-                      <th style={{ ...th, textAlign: "right" }}>BuyIn</th>
-                      <th style={{ ...th, textAlign: "right" }}>Ending</th>
-                      <th style={{ ...th, textAlign: "right" }}>差分</th>
+                      <th style={{ ...th, textAlign: "right" }}>
+                        <button
+                          onClick={() => toggleSort("buy_in_bb")}
+                          style={{
+                            all: "unset",
+                            cursor: "pointer",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 8,
+                          }}
+                        >
+                          <span>BuyIn</span>
+                          <span style={{ fontSize: 12, opacity: 0.7 }}>
+                            {(!sortClicked || sortKey !== "buy_in_bb") && "▲▼"}
+                            {sortClicked &&
+                              sortKey === "buy_in_bb" &&
+                              (sortDir === "asc" ? "▲" : "▼")}
+                          </span>
+                        </button>
+                      </th>
+                      <th style={{ ...th, textAlign: "right" }}>
+                        <button
+                          onClick={() => toggleSort("ending_bb")}
+                          style={{
+                            all: "unset",
+                            cursor: "pointer",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 8,
+                          }}
+                        >
+                          <span>Ending</span>
+                          <span style={{ fontSize: 12, opacity: 0.7 }}>
+                            {(!sortClicked || sortKey !== "ending_bb") && "▲▼"}
+                            {sortClicked &&
+                              sortKey === "ending_bb" &&
+                              (sortDir === "asc" ? "▲" : "▼")}
+                          </span>
+                        </button>
+                      </th>
+                      <th style={{ ...th, textAlign: "right" }}>
+                        <button
+                          onClick={() => toggleSort("delta")}
+                          style={{
+                            all: "unset",
+                            cursor: "pointer",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 8,
+                          }}
+                        >
+                          <span>差分</span>
+                          <span style={{ fontSize: 12, opacity: 0.7 }}>
+                            {(!sortClicked || sortKey !== "delta") && "▲▼"}
+                            {sortClicked &&
+                              sortKey === "delta" &&
+                              (sortDir === "asc" ? "▲" : "▼")}
+                          </span>
+                        </button>
+                      </th>
                       <th style={th}>メモ</th>
                       <th style={th}>balance_id</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {balancesFilteredSorted.map((b, idx) => {
+                    {balancesSortedByUI.map((b, idx) => {
                       const delta =
                         (Number(b.ending_bb) || 0) - (Number(b.buy_in_bb) || 0);
                       const { text, color } = fmtDiff(delta);

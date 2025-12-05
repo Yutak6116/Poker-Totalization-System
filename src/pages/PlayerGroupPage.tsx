@@ -342,6 +342,63 @@ export default function PlayerGroupPage() {
     fMemo,
   ]);
 
+  // ---- テーブルソート（最終更新 / 日付 / BuyIn / Ending / 差分）----
+  type SortKey = "last_updated" | "date" | "buy_in_bb" | "ending_bb" | "delta";
+  type SortDir = "asc" | "desc";
+  // デフォルトは最終更新の降順。UIは初回は三角両方表示にしたいので、クリック済みフラグを持つ。
+  const [sortKey, setSortKey] = useState<SortKey>("last_updated");
+  const [sortDir, setSortDir] = useState<SortDir>("desc");
+  const [sortClicked, setSortClicked] = useState(false);
+
+  const sortedBalances = useMemo(() => {
+    const arr = [...myBalancesFilteredSorted];
+    const getVal = (b: BalanceRow, k: SortKey): number => {
+      switch (k) {
+        case "last_updated":
+          // Timestamp 対応
+          return b.last_updated?.toMillis?.() ?? 0;
+        case "date":
+          return b.date_ts?.toMillis?.() ?? toMsDateOnly(b.date);
+        case "buy_in_bb":
+          return Number(b.buy_in_bb) ?? 0;
+        case "ending_bb":
+          return Number(b.ending_bb) ?? 0;
+        case "delta":
+          return (Number(b.ending_bb) ?? 0) - (Number(b.buy_in_bb) ?? 0);
+        default:
+          return 0;
+      }
+    };
+    arr.sort((a, b) => {
+      const va = getVal(a, sortKey);
+      const vb = getVal(b, sortKey);
+      return sortDir === "asc" ? va - vb : vb - va;
+    });
+    return arr;
+  }, [myBalancesFilteredSorted, sortKey, sortDir]);
+
+  const toggleSort = (k: SortKey) => {
+    // 次のキー・向きを決定してから個別に状態更新（バッチでも安全）
+    let nextKey: SortKey = sortKey;
+    let nextDir: SortDir = sortDir;
+    if (sortKey !== k) {
+      nextKey = k;
+      nextDir = "asc"; // 新しいカラムは昇順から
+    } else {
+      nextDir = sortDir === "asc" ? "desc" : "asc"; // 同カラムはトグル
+    }
+    setSortKey(nextKey);
+    setSortDir(nextDir);
+    setSortClicked(true);
+  };
+
+  // フィルタ後の差分合計
+  const myTotalDelta = useMemo(() => {
+    return myBalancesFilteredSorted.reduce((sum, b) => {
+      return sum + (b.ending_bb - b.buy_in_bb);
+    }, 0);
+  }, [myBalancesFilteredSorted]);
+
   // ---- サマリー（× で個別クリア）----
   const filterSummary = useMemo(() => {
     const chips: { label: string; clear: () => void }[] = [];
@@ -1080,6 +1137,17 @@ export default function PlayerGroupPage() {
                     )}
                   </div>
 
+                  {/* 合計（差分） */}
+                  <div style={{ marginTop: 8, fontSize: 14 }}>
+                    合計（差分）:{" "}
+                    {(() => {
+                      const { text, color } = fmtDiff(myTotalDelta);
+                      return (
+                        <span style={{ fontWeight: 700, color }}>{text}</span>
+                      );
+                    })()}
+                  </div>
+
                   {myBalancesFilteredSorted.length === 0 ? (
                     <div style={{ opacity: 0.7 }}>まだデータがありません。</div>
                   ) : (
@@ -1088,21 +1156,147 @@ export default function PlayerGroupPage() {
                     >
                       <thead>
                         <tr>
-                          <th style={th}>日付</th>
+                          {/* 最終更新日時 */}
+                          <th style={th}>
+                            <button
+                              onClick={() => toggleSort("last_updated")}
+                              style={{
+                                all: "unset",
+                                cursor: "pointer",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: 8,
+                              }}
+                            >
+                              <span>最終更新</span>
+                              <span style={{ fontSize: 12, opacity: 0.7 }}>
+                                {(!sortClicked || sortKey !== "last_updated") &&
+                                  "▲▼"}
+                                {sortClicked &&
+                                  sortKey === "last_updated" &&
+                                  (sortDir === "asc" ? "▲" : "▼")}
+                              </span>
+                            </button>
+                          </th>
+                          {/* 日付 */}
+                          <th style={th}>
+                            <button
+                              onClick={() => toggleSort("date")}
+                              style={{
+                                all: "unset",
+                                cursor: "pointer",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: 8,
+                              }}
+                            >
+                              <span>日付</span>
+                              <span style={{ fontSize: 12, opacity: 0.7 }}>
+                                {(!sortClicked || sortKey !== "date") && "▲▼"}
+                                {sortClicked &&
+                                  sortKey === "date" &&
+                                  (sortDir === "asc" ? "▲" : "▼")}
+                              </span>
+                            </button>
+                          </th>
                           <th style={th}>ステークス</th>
-                          <th style={{ ...th, textAlign: "right" }}>BuyIn</th>
-                          <th style={{ ...th, textAlign: "right" }}>Ending</th>
-                          <th style={{ ...th, textAlign: "right" }}>差分</th>
+                          <th style={{ ...th, textAlign: "right" }}>
+                            <button
+                              onClick={() => toggleSort("buy_in_bb")}
+                              style={{
+                                all: "unset",
+                                cursor: "pointer",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: 8,
+                              }}
+                            >
+                              <span>BuyIn</span>
+                              <span style={{ fontSize: 12, opacity: 0.7 }}>
+                                {(!sortClicked || sortKey !== "buy_in_bb") &&
+                                  "▲▼"}
+                                {sortClicked &&
+                                  sortKey === "buy_in_bb" &&
+                                  (sortDir === "asc" ? "▲" : "▼")}
+                              </span>
+                            </button>
+                          </th>
+                          <th style={{ ...th, textAlign: "right" }}>
+                            <button
+                              onClick={() => toggleSort("ending_bb")}
+                              style={{
+                                all: "unset",
+                                cursor: "pointer",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: 8,
+                              }}
+                            >
+                              <span>Ending</span>
+                              <span style={{ fontSize: 12, opacity: 0.7 }}>
+                                {(!sortClicked || sortKey !== "ending_bb") &&
+                                  "▲▼"}
+                                {sortClicked &&
+                                  sortKey === "ending_bb" &&
+                                  (sortDir === "asc" ? "▲" : "▼")}
+                              </span>
+                            </button>
+                          </th>
+                          <th style={{ ...th, textAlign: "right" }}>
+                            <button
+                              onClick={() => toggleSort("delta")}
+                              style={{
+                                all: "unset",
+                                cursor: "pointer",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: 8,
+                              }}
+                            >
+                              <span>差分</span>
+                              <span style={{ fontSize: 12, opacity: 0.7 }}>
+                                {(!sortClicked || sortKey !== "delta") && "▲▼"}
+                                {sortClicked &&
+                                  sortKey === "delta" &&
+                                  (sortDir === "asc" ? "▲" : "▼")}
+                              </span>
+                            </button>
+                          </th>
                           <th style={th}>メモ</th>
                           <th style={th}></th>
                         </tr>
                       </thead>
                       <tbody>
-                        {myBalancesFilteredSorted.map((b) => {
+                        {sortedBalances.map((b) => {
                           const d = b.ending_bb - b.buy_in_bb;
                           const { text, color } = fmtDiff(d);
                           return (
                             <tr key={b.__id}>
+                              <td style={td}>
+                                {(() => {
+                                  const t = b.last_updated?.toDate?.();
+                                  if (t) {
+                                    const yyyy = t.getFullYear();
+                                    const mm = String(
+                                      t.getMonth() + 1
+                                    ).padStart(2, "0");
+                                    const dd = String(t.getDate()).padStart(
+                                      2,
+                                      "0"
+                                    );
+                                    const hh = String(t.getHours()).padStart(
+                                      2,
+                                      "0"
+                                    );
+                                    const mi = String(t.getMinutes()).padStart(
+                                      2,
+                                      "0"
+                                    );
+                                    return `${yyyy}-${mm}-${dd} ${hh}:${mi}`;
+                                  }
+                                  return "-";
+                                })()}
+                              </td>
                               <td style={td}>{b.date}</td>
                               <td style={td}>{b.stakes}</td>
                               <td style={{ ...td, textAlign: "right" }}>
