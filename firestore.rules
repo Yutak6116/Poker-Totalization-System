@@ -71,5 +71,21 @@ service cloud.firestore {
                     && request.resource.data.group_id is int;
       allow update, delete: if false;
     }
+
+    // ===== users ルート（初回登録：表示名は更新不可）=====
+    match /users/{uid} {
+      // 自分のユーザープロファイルは参照可
+      allow read: if isSignedIn() && uid == request.auth.uid;
+
+      // 初回作成のみ許可。display_name は 1..32 文字。
+      allow create: if isSignedIn()
+        && uid == request.auth.uid
+        && request.resource.data.display_name is string
+        && request.resource.data.display_name.size() >= 1
+        && request.resource.data.display_name.size() <= 32;
+
+      // 変更不可（表示名は固定）
+      allow update, delete: if false;
+    }
   }
 }
