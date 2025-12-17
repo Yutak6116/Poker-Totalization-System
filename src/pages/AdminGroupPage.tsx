@@ -22,6 +22,7 @@ import RankingTable from "../components/RankingTable";
 import BalanceDatabaseView from "../components/BalanceDatabaseView";
 import HistoryList from "../components/HistoryList";
 import GroupSettingsForm from "../components/GroupSettingsForm";
+import { useBalanceFilter } from "../hooks/useBalanceFilter";
 
 // ========== ページ本体 ==========
 export default function AdminGroupPage() {
@@ -79,6 +80,8 @@ export default function AdminGroupPage() {
       setHistories(hs.docs.map((d) => d.data() as HistoryDoc));
     })();
   }, [groupId]);
+
+  const balanceHook = useBalanceFilter(balances as any);
 
 
 
@@ -169,10 +172,11 @@ export default function AdminGroupPage() {
           {/* ========== 収支一覧 ========== */}
           {tab === "収支一覧" && (
             // Use shared component w/ cast
+            // Use shared component w/ cast
             <BalanceDatabaseView
-              balances={balances as any}
               players={players}
               mode="admin"
+              {...balanceHook}
             />
           )}
 

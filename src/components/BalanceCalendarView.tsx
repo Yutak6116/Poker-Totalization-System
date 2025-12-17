@@ -4,9 +4,10 @@ import { fmtDiff } from "../utils/poker";
 
 type Props = {
   balances: BalanceRow[];
+  onDateClick?: (date: string) => void;
 };
 
-export default function BalanceCalendarView({ balances }: Props) {
+export default function BalanceCalendarView({ balances, onDateClick }: Props) {
   const [month, setMonth] = useState(() => {
     const d = new Date();
     return new Date(d.getFullYear(), d.getMonth(), 1);
@@ -149,6 +150,12 @@ export default function BalanceCalendarView({ balances }: Props) {
                 borderRight: (i + 1) % 7 === 0 ? "none" : "1px solid #f4f4f7",
                 padding: 4,
                 background: c.inMonth ? "#fff" : "#fafafa",
+                cursor: c.inMonth && c.date ? "pointer" : "default",
+              }}
+              onClick={() => {
+                if (c.inMonth && c.date && onDateClick) {
+                  onDateClick(c.date);
+                }
               }}
             >
               <div
@@ -176,7 +183,6 @@ export default function BalanceCalendarView({ balances }: Props) {
           );
         })}
       </div>
-      {/* 月間合計 */}
       <div style={{ marginTop: 12, textAlign: "right" }}>
         <span style={{ fontSize: 12, color: "#777" }}>月間合計:</span>
         <span
@@ -189,6 +195,16 @@ export default function BalanceCalendarView({ balances }: Props) {
         >
           {fmtDiff(totalDelta).text}
         </span>
+      </div>
+      <div
+        style={{
+          marginTop: 16,
+          fontSize: 12,
+          color: "#888",
+          textAlign: "center",
+        }}
+      >
+        ※ 日付をクリックするとデータベースビューに移り、詳細を確認できます
       </div>
     </div>
   );
