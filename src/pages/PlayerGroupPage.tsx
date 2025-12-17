@@ -414,6 +414,7 @@ export default function PlayerGroupPage() {
                 balances={allBalances}
                 players={playersMap}
                 topN={group!.settings?.ranking_top_n ?? 10}
+                myPlayerUid={user?.uid}
               />
             </div>
           )}
