@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Modal from "./Modal";
 import { getFixedStakes, parseLegacyStakes } from "../utils/poker";
 import type { BalanceDoc, GroupDoc } from "../types/poker";
@@ -51,7 +51,16 @@ export default function BalanceFormModal({
   const [memo, setMemo] = useState("");
   const [saving, setSaving] = useState(false);
 
-  const fixed = getFixedStakes(group);
+  // Stabilize fixed stakes object to prevent unwanted effect re-runs
+  const fixed = useMemo(() => getFixedStakes(group), [group]);
+
+  // Memoize legacy stakes parsing for the same reason if balance exists
+  const legacyStakes = useMemo(() => {
+    if (balance && !fixed) {
+      return parseLegacyStakes(balance.stakes);
+    }
+    return null;
+  }, [balance, fixed]);
 
   // Initialize state
   useEffect(() => {
@@ -66,13 +75,17 @@ export default function BalanceFormModal({
         if (fixed) {
           setSb(String(fixed.sb));
           setBb(String(fixed.bb));
-        } else {
-          const leg = parseLegacyStakes(balance.stakes);
-          setSb(leg.sb ? String(leg.sb) : "");
-          setBb(leg.bb ? String(leg.bb) : "");
+        } else if (legacyStakes) {
+          setSb(legacyStakes.sb ? String(legacyStakes.sb) : "");
+          setBb(legacyStakes.bb ? String(legacyStakes.bb) : "");
         }
       } else {
         // Create Mode
+        // Only set defaults if state is empty? 
+        // Actually, we want to reset to defaults whenever modal opens fresh.
+        // But if 'open' stays true and we type, this effect should NOT run.
+        // The issue was 'fixed' changing identity on every render.
+        
         setDate(defaultDate || new Date().toISOString().slice(0, 10));
         setBuyIn("");
         setEnding("");
@@ -90,7 +103,12 @@ export default function BalanceFormModal({
         }
       }
     }
-  }, [open, balance, fixed, defaultDate, defaultStakes]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, balance]); 
+  // Removed 'fixed', 'defaultDate', 'defaultStakes' from dependency array 
+  // because we only want to initialize when the modal *opens* or the target *balance* changes.
+  // We trust 'open' and 'balance' identity changes to trigger reset.
+  // 'fixed' is stable now thanks to useMemo, but logic-wise we only need to load it on open.
 
   const handleSave = async () => {
     const sVal = Number(sb);
