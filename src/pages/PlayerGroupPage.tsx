@@ -30,6 +30,10 @@ import BalanceCalendarView from "../components/BalanceCalendarView";
 import BalanceFormModal from "../components/BalanceFormModal";
 import DeleteConfirmModal from "../components/DeleteConfirmModal";
 import { usePlayerActions } from "../hooks/usePlayerActions";
+import {
+  INITIAL_FILTER_STATE,
+  useBalanceFilter,
+} from "../hooks/useBalanceFilter";
 
 export default function PlayerGroupPage() {
   const { groupId } = useParams<{ groupId: string }>();
@@ -150,6 +154,8 @@ export default function PlayerGroupPage() {
       ),
     [myBalances]
   );
+
+  const balanceHook = useBalanceFilter(myBalances as BalanceRow[]);
 
   // -------------- 共通: 履歴作成 --------------
   // -------------- アクション (Hook) --------------
@@ -366,13 +372,23 @@ export default function PlayerGroupPage() {
               </div>
 
               {confirmView === "calendar" && (
-                <BalanceCalendarView balances={myBalancesSorted} />
+                <BalanceCalendarView
+                  balances={myBalancesSorted}
+                  onDateClick={(date) => {
+                    balanceHook.setFilterState({
+                      ...INITIAL_FILTER_STATE,
+                      fBDateStart: date,
+                      fBDateEnd: date,
+                    });
+                    setConfirmView("table");
+                  }}
+                />
               )}
 
               {confirmView === "table" && (
                 // Use shared component
                 <BalanceDatabaseView
-                  balances={myBalances as BalanceRow[]}
+                  {...balanceHook}
                   players={playersMap}
                   mode="player"
                   onAction={(b) => {

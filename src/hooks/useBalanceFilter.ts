@@ -3,7 +3,7 @@ import type { BalanceDoc, BalanceRow } from "../types/poker";
 import { toMs, toMsDateOnly, toMsDateOnlyEnd, deltaOf } from "../utils/poker";
 
 // Extend BalanceDoc to allow __id if present, but base logic works on BalanceDoc fields
-type BalanceItem = BalanceRow | BalanceDoc;
+export type BalanceItem = BalanceRow | BalanceDoc;
 
 export type BalanceFilterState = {
   fBUStart: string;

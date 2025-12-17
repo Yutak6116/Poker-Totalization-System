@@ -4,13 +4,23 @@ import {
   type BalanceFilterState,
   INITIAL_FILTER_STATE,
   type SortKey,
-  useBalanceFilter,
+  type BalanceItem,
 } from "../hooks/useBalanceFilter";
 import Modal from "./Modal";
 import { fmtDiff, playerNameOf } from "../utils/poker";
 
 type Props = {
-  balances: BalanceRow[];
+  // Lifted state from useBalanceFilter
+  filterState: BalanceFilterState;
+  setFilterState: React.Dispatch<React.SetStateAction<BalanceFilterState>>;
+  sortKey: SortKey;
+  sortDir: "asc" | "desc";
+  sortClicked: boolean;
+  toggleSort: (k: SortKey) => void;
+  sortedBalances: BalanceItem[];
+  totalDelta: number;
+
+  balances?: BalanceRow[]; // Optional now as we use sortedBalances
   players: Record<string, PlayerDoc>;
   mode: "admin" | "player";
   // Player mode might have actions
@@ -18,21 +28,18 @@ type Props = {
 };
 
 export default function BalanceDatabaseView({
-  balances,
+  filterState,
+  setFilterState,
+  sortKey,
+  sortDir,
+  sortClicked,
+  toggleSort,
+  sortedBalances,
+  totalDelta,
   players,
   mode,
   onAction,
 }: Props) {
-  const {
-    filterState,
-    setFilterState,
-    sortKey,
-    sortDir,
-    sortClicked,
-    toggleSort,
-    sortedBalances,
-    totalDelta,
-  } = useBalanceFilter(balances);
 
   const [openFilter, setOpenFilter] = useState(false);
 
